@@ -359,35 +359,52 @@ display: none;
 </div>
 
 
-<div id="about-the-bellabeat" class="section level2">
-<h2>About the Bellabeat</h2>
-<p>Urška Sršen and Sando Mur founded Bellabeat, a high-tech company that
-manufactures health-focused smart products. Collecting data on activity,
-sleep, stress, and reproductive health has allowed Bellabeat to empower
-women with knowledge about their own health and habits. Since it was
-founded in 2013, Bellabeat has grown rapidly and quickly positioned
-itself as a tech-driven wellness company for women.</p>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<div id="about-the-project" class="section level2">
+<h2>About the Project</h2>
+<p><strong>Business Task:</strong> The aim of this project is to gain
+insights into smart device usage trends and their potential application
+to Bellabeat customers, as well as to use these findings to inform
+Bellabeat’s marketing strategy. The analysis consider the following
+questions:</p>
+<ul>
+<li><p>What are some trends in smart device usage?</p></li>
+<li><p>How could these trends apply to Bellabeat customers?</p></li>
+<li><p>How could these trends help influence Bellabeat marketing
+strategy</p></li>
+</ul>
+</div>
+<div id="about-the-company" class="section level2">
+<h2>About the Company</h2>
+<p><strong>Urška Sršen</strong> and <strong>Sando Mur</strong> founded
+Bellabeat, a high-tech company that manufactures health-focused smart
+products. Collecting data on activity, sleep, stress, and reproductive
+health has allowed Bellabeat to empower women with knowledge about their
+own health and habits. Since it was founded in 2013, Bellabeat has grown
+rapidly and quickly positioned itself as a tech-driven wellness company
+for women.</p>
 <p>By 2016, Bellabeat had opened offices around the world and launched
 multiple products. Bellabeat products became available through a growing
 number of online retailers in addition to their own e-commerce channel
 on their <a href="https://bellabeat.com/">website</a>.</p>
-<p>Sršen knows that an analysis of Bellabeat’s available consumer data
-would reveal more opportunities for growth. She has asked the marketing
-analytics team to focus on a Bellabeat product and analyze smart device
-usage data in order to gain insight into how people are already using
-their smart devices. Then, using this information, she would like
-high-level recommendations for how these trends can inform Bellabeat
-marketing strategy.</p>
+<p><strong>Sršen</strong> knows that an analysis of Bellabeat’s
+available consumer data would reveal more opportunities for growth. She
+has asked the marketing analytics team to focus on a Bellabeat product
+and analyze smart device usage data in order to gain insight into how
+people are already using their smart devices. Then, using this
+information, she would like high-level recommendations for how these
+trends can inform Bellabeat marketing strategy.</p>
 </div>
-<div id="about-the-data-set" class="section level2">
-<h2>About the Data Set</h2>
+<div id="about-the-data" class="section level2">
+<h2>About the Data</h2>
 <p><strong>Data Used</strong>: The data set consisted of public data
 that explores smart device users’ daily habits.</p>
 <ul>
 <li><a href="https://www.kaggle.com/datasets/arashnic/fitbit">FitBit
 Fitness Tracker Data</a> (CC0: Public Domain, dataset made available
 through <a href="https://www.kaggle.com/arashnic">Mobius</a>): This
-Kaggle data set contains personal fitness tracker from thirty fitbit
+Kaggle data set contains personal fitness tracker from thirty Fitbit
 users. Thirty eligible Fitbit users consented to the submission of
 personal tracker data, including minute-level output for physical
 activity, heart rate, and sleep monitoring. It includes information
@@ -436,13 +453,21 @@ therefore converting the data type from <code>character</code> to
 <code>Date</code> is required. Only the table <code>weightLogInfo</code>
 has a column with <code>logicals</code>. You may refer to the function
 in the documentation for further details.</p></li>
+<li><p>The minimum first date in the <code>ActivityDate</code> is April
+12th, 2016, while the last is May 12th of the same year. This provides a
+30-day reporting period to analyze. It’s possible that users’ behavior
+during this 30 days may be influenced by factors that are specific to
+that period, such as a holiday or a special event. Such a small period
+might not be enough to generalize the users’ behavior in the long run;
+however, it can still provide valuable insights into users’ behavior
+during that time.</p></li>
 </ul>
 <table>
 <colgroup>
-<col width="22%" />
-<col width="22%" />
-<col width="22%" />
-<col width="33%" />
+<col width="25%" />
+<col width="24%" />
+<col width="24%" />
+<col width="25%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -564,10 +589,56 @@ in the documentation for further details.</p></li>
 </tr>
 </tbody>
 </table>
+</div>
+</div>
+<div id="process" class="section level1">
+<h1>Process</h1>
+<p>I will focus on conducting the analysis by utilizing the programming
+language R. R has a vast collection of packages and libraries that
+provide powerful and flexible tools for data analysis, visualization,
+and modeling, and besides that, is free open-source software. I will be
+using the following packages:</p>
+<ul>
+<li><p><code>ggplot2</code>: A package for creating visually appealing
+and informative data visualizations. It is based on the grammar of
+graphics, which allows users to build complex plots by combining simple
+components.</p></li>
+<li><p><code>readr</code>: A package for reading in and parsing flat
+files (e.g. CSV files) into R data frames. It is designed to be fast and
+memory-efficient, making it ideal for working with large data
+sets.</p></li>
+<li><p><code>dplyr</code>: A package for data manipulation and
+transformation. It provides a set of easy-to-use functions for
+filtering, grouping, summarizing, and joining data, making it a powerful
+tool for data wrangling tasks.</p></li>
+</ul>
 <pre class="r"><code># Import libraries
 library(ggplot2)
 library(readr)
 library(dplyr)</code></pre>
+<p>Further to my previous comments, the entire data consisted of 18
+tables of CSV files. The task of importing the data into R using
+<code>read_csv</code> could be cumbersome if we proceeded manually.
+Instead, I will create a function to do that task.</p>
+<ul>
+<li><p>This function will import a list of CSV files located in a
+specified folder and returns them as a named list of data frames in
+R.</p></li>
+<li><p>The original table names contain an underscore (<code>_</code>)
+somewhere in the string, I am going to use that underscore to create
+shorter names for each table in such a way that:
+<code>dailyActivity_merged.csv</code> will be
+<code>dailyActivity</code></p></li>
+<li><p>In the end, this function will be useful for importing multiple
+CSV files into R as a single named list of data frames and, I will use
+that list to analyse their data type. The advantage of having a list of
+data frames instead of individual data frames is that it facilitates the
+management of multiple datasets. Rather than keeping track of individual
+data frames separately, a list can store and manipulate them as a single
+object. This can simplify the code and make it easier to apply functions
+or manipulate the data in a consistent manner across all
+datasets.</p></li>
+</ul>
 <pre class="r"><code># Create a function to import all the data sets within the folder as a list
 importDataList &lt;- function(folder_path = &quot;data&quot;) {
         
