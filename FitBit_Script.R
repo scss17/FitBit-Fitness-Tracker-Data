@@ -67,7 +67,7 @@ num_dataType <- function(dataList) {
 }
 bellaFit_dataType <- num_dataType(bellaFit)
 
-# This function takes a list of data frames as an input and returns a data frame 
+# Define a function takes a list of data frames as an input and returns a data frame 
 # with information about the data types of each data frame.
 num_dataType <- function(dataList) {
         
@@ -82,6 +82,7 @@ num_dataType <- function(dataList) {
         num_nume <- c() # Count of numeric variable
         num_fact <- c() # Count of factor variables
         num_date <- c() # Count of date variables
+        num_logi <- c() # Count of logical variables
         
         # Loop through each data frame in the input list and count the variables of each data type
         for(i in seq_along(dataList)) {
@@ -90,7 +91,7 @@ num_dataType <- function(dataList) {
                 num_nume[i] <- sum(sapply(dataList[[i]], is.numeric)) # Count the number of numeric variables
                 num_fact[i] <- sum(sapply(dataList[[i]], is.factor)) # Count the number of factor variables
                 num_date[i] <- sum(sapply(dataList[[i]], lubridate::is.Date)) # Count the number of date variables
-                
+                num_logi[i] <- sum(sapply(dataList[[i]], is.logical)) # Count the number of logical variables
         }
         
         # Combine the results into a data frame
@@ -99,7 +100,8 @@ num_dataType <- function(dataList) {
                               character = num_char,
                               numeric = num_nume,
                               factor = num_fact,
-                              date = num_date)
+                              date = num_date,
+                              logical = num_logi)
         
         # Assign the names of the input data frames as row names in the output data frame
         row.names(type_df) <- names(dataList)
@@ -110,8 +112,8 @@ num_dataType <- function(dataList) {
 bellaFit_dataType <- num_dataType(bellaFit)
 bellaFit_dataType
 
-
-
-
+# Check the fisrt and last date in the data set
+min(lubridate::as_date(bellaFit$dailyActivity$ActivityDate, format = "%m/%d/%Y")) 
+max(lubridate::as_date(bellaFit$dailyActivity$ActivityDate, format = "%m/%d/%Y"))
 
 
