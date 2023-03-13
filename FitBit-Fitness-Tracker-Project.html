@@ -366,7 +366,7 @@ display: none;
 <p><strong>Business Task:</strong> The aim of this project is to gain
 insights into smart device usage trends and their potential application
 to Bellabeat customers, as well as to use these findings to inform
-Bellabeat’s marketing strategy. The analysis consider the following
+Bellabeat’s marketing strategy. The analysis considers the following
 questions:</p>
 <ul>
 <li><p>What are some trends in smart device usage?</p></li>
@@ -464,10 +464,10 @@ during that time.</p></li>
 </ul>
 <table>
 <colgroup>
-<col width="25%" />
-<col width="24%" />
-<col width="24%" />
-<col width="25%" />
+<col width="23%" />
+<col width="23%" />
+<col width="23%" />
+<col width="28%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -589,6 +589,7 @@ during that time.</p></li>
 </tr>
 </tbody>
 </table>
+<hr />
 </div>
 </div>
 <div id="process" class="section level1">
@@ -611,15 +612,27 @@ sets.</p></li>
 transformation. It provides a set of easy-to-use functions for
 filtering, grouping, summarizing, and joining data, making it a powerful
 tool for data wrangling tasks.</p></li>
+<li><p><code>lubridate</code>: A package that provides functions to work
+with dates and times. It makes it easier to parse, manipulate, and
+format date-time objects in R. The package provides a consistent and
+user-friendly syntax for common date-time operations, which can be
+difficult to perform in base R.</p></li>
+<li><p><code>janitor</code>: The janitor package is an R package that
+provides a set of functions for data cleaning and data tidying tasks. It
+offers a range of simple and consistent functions that can help clean up
+messy datasets and quickly perform common data manipulation
+tasks.</p></li>
 </ul>
-<pre class="r"><code># Import libraries
+<pre class="r"><code># Load libraries
 library(ggplot2)
 library(readr)
-library(dplyr)</code></pre>
-<p>Further to my previous comments, the entire data consisted of 18
-tables of CSV files. The task of importing the data into R using
-<code>read_csv</code> could be cumbersome if we proceeded manually.
-Instead, I will create a function to do that task.</p>
+library(dplyr)
+library(lubridate)
+library(janitor)</code></pre>
+<p>As mentioned before, the entire data consisted of 18 tables of CSV
+files. The task of importing the data into R using <code>read_csv</code>
+could be cumbersome if we proceeded manually. Instead, I will create a
+function to do that task.</p>
 <ul>
 <li><p>This function will import a list of CSV files located in a
 specified folder and returns them as a named list of data frames in
@@ -628,7 +641,7 @@ R.</p></li>
 somewhere in the string, I am going to use that underscore to create
 shorter names for each table in such a way that:
 <code>dailyActivity_merged.csv</code> will be
-<code>dailyActivity</code></p></li>
+<code>dailyActivity</code>, for instance.</p></li>
 <li><p>In the end, this function will be useful for importing multiple
 CSV files into R as a single named list of data frames and, I will use
 that list to analyse their data type. The advantage of having a list of
@@ -670,6 +683,79 @@ importDataList &lt;- function(folder_path = &quot;data&quot;) {
         return(data_list)
 }
 bellaFit &lt;- importDataList()</code></pre>
+<p>Once the data set is loaded, I need to change some variables.</p>
+<ol style="list-style-type: decimal">
+<li>The variables that represent the <code>datestamp</code> are parsed
+as <code>character</code>. Therefore, for converting the data type from
+character to Date I use the following chuck of code. For instance, in
+<code>dailyActivity</code> data frame, the column is modified using the
+existing <code>ActivityDate</code> column, but with its format converted
+to date using the <code>lubridate::as_date</code> function. The
+specified format for the date conversion is <code>&quot;%m/%d/%Y&quot;</code>,
+which means that the original date strings are expected to be in the
+format of <code>month/day/year</code>.</li>
+</ol>
+<pre class="r"><code># Change data type from text to date in dailyActivity data set
+bellaFit$dailyActivity &lt;- bellaFit$dailyActivity %&gt;%
+        mutate(ActivityDate = as_date(ActivityDate, format = &quot;%m/%d/%Y&quot;))
+
+# Change data type from text to date in dailySteps data set
+bellaFit$dailySteps &lt;- bellaFit$dailySteps %&gt;%
+        mutate(ActivityDay = as_date(ActivityDay, format = &quot;%m/%d/%Y&quot;))
+
+# Change data type from text to date in sleepDay data set
+bellaFit$sleepDay &lt;- bellaFit$sleepDay %&gt;%
+        mutate(SleepDay = as_date(SleepDay, format = &quot;%m/%d/%Y&quot;))</code></pre>
+<ol start="2" style="list-style-type: decimal">
+<li>The column names also need to be changed. I use
+<strong><code>clean_names()</code></strong> function from the
+<strong><code>janitor</code></strong> package to clean up the column
+names of a data frame. In this code, the
+<strong><code>clean_names()</code></strong> is used to standardize the
+column names of three data frames within the
+<strong><code>bellaFit</code></strong> object:
+<strong><code>dailyActivity</code></strong>,
+<strong><code>dailySteps</code></strong>, and
+<strong><code>sleepDay</code></strong>.</li>
+</ol>
+<pre class="r"><code># Clean up the column names of the dailyActivity data frame 
+bellaFit$dailyActivity &lt;- clean_names(bellaFit$dailyActivity)
+
+# Clean up the column names of the dailySteps data frame
+bellaFit$dailySteps &lt;- clean_names(bellaFit$dailySteps)
+
+# Clean up the column names of the sleepDay data frame 
+bellaFit$sleepDay &lt;- clean_names(bellaFit$sleepDay)
+
+# Rename data set names
+names(bellaFit)[which(names(bellaFit) %in% c(&quot;dailyActivity&quot;, &quot;dailySteps&quot;, &quot;sleepDay&quot;))] &lt;- c(&quot;daily_activity&quot;,                                                     &quot;daily_steps&quot;,                                                       &quot;sleep_day&quot;) </code></pre>
+<ol start="3" style="list-style-type: decimal">
+<li>We need to ensure that there are no duplicate rows in the data.
+Removing duplicated rows is an important step in data cleaning because
+duplicated data can bias statistical analysis and lead to incorrect
+results. Then I removed the duplicated rows afterwards.</li>
+</ol>
+<pre class="r"><code># Create a data frame that lists the number of duplicated rows in three tables of a larger data set
+data.frame(
+        
+        # Column that lists the name of each table
+        table_name = c(&quot;daily_activity&quot;, &quot;daily_steps&quot;, &quot;sleep_day&quot;),
+        
+        # Column that lists the number of duplicated rows in each table
+        duplicated_rows = c(
+                
+                # Calculate the number of duplicated rows
+                sum(duplicated(bellaFit$daily_activity)), # daily_activity table
+                sum(duplicated(bellaFit$daily_steps)), # daily_steps table
+                sum(duplicated(bellaFit$sleep_day)) # sleep_day table
+        )
+) </code></pre>
+<pre><code>##       table_name duplicated_rows
+## 1 daily_activity               0
+## 2    daily_steps               0
+## 3      sleep_day               3</code></pre>
+<pre class="r"><code># Remote duplicated rows
+bellaFit$sleep_day &lt;- bellaFit$sleep_day %&gt;% distinct()</code></pre>
 </div>
 
 

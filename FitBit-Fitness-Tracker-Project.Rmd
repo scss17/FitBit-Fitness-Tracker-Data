@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## About the Project
 
-**Business Task:** The aim of this project is to gain insights into smart device usage trends and their potential application to Bellabeat customers, as well as to use these findings to inform Bellabeat's marketing strategy. The analysis consider the following questions:
+**Business Task:** The aim of this project is to gain insights into smart device usage trends and their potential application to Bellabeat customers, as well as to use these findings to inform Bellabeat's marketing strategy. The analysis considers the following questions:
 
 -   What are some trends in smart device usage?
 
@@ -49,7 +49,7 @@ By 2016, Bellabeat had opened offices around the world and launched multiple pro
 -   The minimum first date in the `ActivityDate` is April 12th, 2016, while the last is May 12th of the same year. This provides a 30-day reporting period to analyze. It's possible that users' behavior during this 30 days may be influenced by factors that are specific to that period, such as a holiday or a special event. Such a small period might not be enough to generalize the users' behavior in the long run; however, it can still provide valuable insights into users' behavior during that time.
 
 | Table Name              | Type     | Participants | Description                                            |
-|:--------------|:-------------|:-------------|:----------------------------|
+|:-----------------|:-----------------|:-----------------|:-------------------|
 | dailyActivity           | CSV File | 33 users     | 15 variables: character 01 \| numeric 14               |
 | dailyCalories           | CSV File | 33 users     | 03 variables: character 01 \| numeric 02               |
 | dailyIntensities        | CSV File | 33 users     | 10 variables: character 01 \| numeric 09               |
@@ -81,11 +81,17 @@ I will focus on conducting the analysis by utilizing the programming language R.
 
 -   `dplyr`: A package for data manipulation and transformation. It provides a set of easy-to-use functions for filtering, grouping, summarizing, and joining data, making it a powerful tool for data wrangling tasks.
 
-```{r Import libraries, message = FALSE}
-# Import libraries
+-   `lubridate`: A package that provides functions to work with dates and times. It makes it easier to parse, manipulate, and format date-time objects in R. The package provides a consistent and user-friendly syntax for common date-time operations, which can be difficult to perform in base R.
+
+-   `janitor`: The janitor package is an R package that provides a set of functions for data cleaning and data tidying tasks. It offers a range of simple and consistent functions that can help clean up messy datasets and quickly perform common data manipulation tasks.
+
+```{r Load libraries, message = FALSE, warning = FALSE}
+# Load libraries
 library(ggplot2)
 library(readr)
 library(dplyr)
+library(lubridate)
+library(janitor)
 ```
 
 As mentioned before, the entire data consisted of 18 tables of CSV files. The task of importing the data into R using `read_csv` could be cumbersome if we proceeded manually. Instead, I will create a function to do that task.
@@ -129,3 +135,63 @@ importDataList <- function(folder_path = "data") {
 }
 bellaFit <- importDataList()
 ```
+
+Once the data set is loaded, I need to change some variables.
+
+1.  The variables that represent the `datestamp` are parsed as `character`. Therefore, for converting the data type from character to Date I use the following chuck of code. For instance, in `dailyActivity` data frame, the column is modified using the existing `ActivityDate` column, but with its format converted to date using the `lubridate::as_date` function. The specified format for the date conversion is `"%m/%d/%Y"`, which means that the original date strings are expected to be in the format of `month/day/year`.
+
+```{r Parsing character as date}
+# Change data type from text to date in dailyActivity data set
+bellaFit$dailyActivity <- bellaFit$dailyActivity %>%
+        mutate(ActivityDate = as_date(ActivityDate, format = "%m/%d/%Y"))
+
+# Change data type from text to date in dailySteps data set
+bellaFit$dailySteps <- bellaFit$dailySteps %>%
+        mutate(ActivityDay = as_date(ActivityDay, format = "%m/%d/%Y"))
+
+# Change data type from text to date in sleepDay data set
+bellaFit$sleepDay <- bellaFit$sleepDay %>%
+        mutate(SleepDay = as_date(SleepDay, format = "%m/%d/%Y"))
+```
+
+2.  The column names also need to be changed. I use **`clean_names()`** function from the **`janitor`** package to clean up the column names of a data frame. In this code, the **`clean_names()`** is used to standardize the column names of three data frames within the **`bellaFit`** object: **`dailyActivity`**, **`dailySteps`**, and **`sleepDay`**.
+3.  For the sake of consistency, we rename the data sets with this standardize convention as well.
+
+```{r Rename column names}
+# Clean up the column names of the dailyActivity data frame 
+bellaFit$dailyActivity <- clean_names(bellaFit$dailyActivity)
+
+# Clean up the column names of the dailySteps data frame
+bellaFit$dailySteps <- clean_names(bellaFit$dailySteps)
+
+# Clean up the column names of the sleepDay data frame 
+bellaFit$sleepDay <- clean_names(bellaFit$sleepDay)
+
+# Rename data set names
+names(bellaFit)[which(names(bellaFit) %in% c("dailyActivity", "dailySteps", "sleepDay"))] <- c("daily_activity", "daily_steps", "sleep_day")  
+```
+
+4.  We need to ensure that there are no duplicate rows in the data. Removing duplicated rows is an important step in data cleaning because duplicated data can bias statistical analysis and lead to incorrect results. Then I removed the duplicated rows afterwards.
+
+```{r Remove duplicated rows}
+# Create a data frame that lists the number of duplicated rows in three tables of a larger data set
+data.frame(
+        
+        # Column that lists the name of each table
+        table_name = c("daily_activity", "daily_steps", "sleep_day"),
+        
+        # Column that lists the number of duplicated rows in each table
+        duplicated_rows = c(
+                
+                # Calculate the number of duplicated rows
+                sum(duplicated(bellaFit$daily_activity)), # daily_activity table
+                sum(duplicated(bellaFit$daily_steps)), # daily_steps table
+                sum(duplicated(bellaFit$sleep_day)) # sleep_day table
+        )
+) 
+
+# Remote duplicated rows
+bellaFit$sleep_day <- bellaFit$sleep_day %>% distinct()
+```
+
+# Analyze 

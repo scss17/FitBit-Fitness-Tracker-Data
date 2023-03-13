@@ -1,9 +1,15 @@
 # Importing libraries and data sets ---------------------------------------
 
+# Installing packages
+install.packages("janitor")
+
 # Load libraries
 library(ggplot2)
 library(readr)
 library(stringr)
+library(dplyr)
+library(janitor)
+library(lubridate)
 
 # Import data sets
 # Create a function to import all the data sets within the folder as a list
@@ -112,8 +118,45 @@ num_dataType <- function(dataList) {
 bellaFit_dataType <- num_dataType(bellaFit)
 bellaFit_dataType
 
-# Check the fisrt and last date in the data set
+# Inspect the data sets content and structure
+glimpse(bellaFit$dailyActivity)
+glimpse(bellaFit$dailyCalories)
+glimpse(bellaFit$dailyIntensities)
+glimpse(bellaFit$dailySteps)
+glimpse(bellaFit$heartrate)
+glimpse(bellaFit$sleepDay)
+
+# Clean the data ----------------------------------------------------------
+
+# Check the first and last date in the data set
 min(lubridate::as_date(bellaFit$dailyActivity$ActivityDate, format = "%m/%d/%Y")) 
 max(lubridate::as_date(bellaFit$dailyActivity$ActivityDate, format = "%m/%d/%Y"))
 
+# Change data type from text to date  
+bellaFit$dailyActivity <- bellaFit$dailyActivity %>%
+        mutate(ActivityDate = as_date(ActivityDate, format = "%m/%d/%Y"))
 
+bellaFit$dailySteps <- bellaFit$dailySteps %>%
+        mutate(ActivityDay = as_date(ActivityDay, format = "%m/%d/%Y"))
+
+bellaFit$sleepDay <- bellaFit$sleepDay %>%
+        mutate(SleepDay = as_date(SleepDay, format = "%m/%d/%Y"))
+
+# Rename columns
+bellaFit$dailyActivity <- clean_names(bellaFit$dailyActivity)
+bellaFit$dailySteps <- clean_names(bellaFit$dailySteps)
+bellaFit$sleepDay <- clean_names(bellaFit$sleepDay)
+
+# Rename data set names
+names(bellaFit)[which(names(bellaFit) %in% c("dailyActivity", "dailySteps", "sleepDay"))] <- c("daily_activity", "daily_steps", "sleep_day") 
+
+
+# Remove duplicated rows
+# Create a data frame with the duplicated rows which are present in the data sets
+data.frame(table_name = c("dailyActivity", "dailySteps", "sleepDay"),
+           duplicated_rows = c(sum(duplicated(bellaFit$dailyActivity)),
+                               sum(duplicated(bellaFit$dailySteps)),
+                               sum(duplicated(bellaFit$sleepDay))))
+
+# Remote duplicated rows
+bellaFit$sleepDay <- bellaFit$sleepDay %>% distinct()
