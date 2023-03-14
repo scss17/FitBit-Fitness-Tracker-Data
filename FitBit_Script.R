@@ -10,6 +10,8 @@ library(stringr)
 library(dplyr)
 library(janitor)
 library(lubridate)
+library(tidyr)
+library(cowplot)
 
 # Import data sets
 # Create a function to import all the data sets within the folder as a list
@@ -140,7 +142,7 @@ bellaFit$dailySteps <- bellaFit$dailySteps %>%
         mutate(ActivityDay = as_date(ActivityDay, format = "%m/%d/%Y"))
 
 bellaFit$sleepDay <- bellaFit$sleepDay %>%
-        mutate(SleepDay = as_date(SleepDay, format = "%m/%d/%Y"))
+        mutate(SleepDay = mdy_hms(bellaFit$sleepDay$SleepDay))
 
 # Rename columns
 bellaFit$dailyActivity <- clean_names(bellaFit$dailyActivity)
@@ -148,8 +150,8 @@ bellaFit$dailySteps <- clean_names(bellaFit$dailySteps)
 bellaFit$sleepDay <- clean_names(bellaFit$sleepDay)
 
 # Rename data set names
-names(bellaFit)[which(names(bellaFit) %in% c("dailyActivity", "dailySteps", "sleepDay"))] <- c("daily_activity", "daily_steps", "sleep_day") 
-
+chosen_tables <- c("dailyActivity", "dailySteps", "sleepDay")
+names(bellaFit)[which(names(bellaFit) %in% chosen_tables)] <- c("daily_activity", "daily_steps", "sleep_day") 
 
 # Remove duplicated rows
 # Create a data frame with the duplicated rows which are present in the data sets
@@ -160,3 +162,118 @@ data.frame(table_name = c("dailyActivity", "dailySteps", "sleepDay"),
 
 # Remote duplicated rows
 bellaFit$sleepDay <- bellaFit$sleepDay %>% distinct()
+
+
+# Visualizations ----------------------------------------------------------
+
+# Sleeping habits
+# Weekends vs Weekdays
+sl1 <- bellaFit$sleep_day %>% 
+        select(-total_sleep_records) %>%
+        mutate(type_of_day = ifelse(wday(sleep_day) %in% 2:6, "Weekday", "Weekend")) %>%
+        ggplot(mapping = aes(x = type_of_day, y = total_minutes_asleep, fill = type_of_day)) +
+        geom_boxplot() + 
+        geom_hline(yintercept = mean(bellaFit$sleep_day$total_minutes_asleep), lty = "twodash", col = "red") +
+        scale_y_continuous(limits = c(0, 1000)) +
+        theme(legend.position = "none") +
+        labs(x = "", 
+             y = "Minutes Asleep")
+
+sl2 <- bellaFit$sleep_day %>% 
+        select(-total_sleep_records) %>%
+        mutate(type_of_day = ifelse(wday(sleep_day) %in% 2:6, "Weekday", "Weekend")) %>%
+        ggplot(mapping = aes(x = type_of_day, y = total_time_in_bed, fill = type_of_day)) +
+        geom_boxplot() +
+        geom_hline(yintercept = mean(bellaFit$sleep_day$total_time_in_bed), lty = "twodash", col = "red") + 
+        scale_y_continuous(limits = c(0, 1000)) +
+        theme(legend.position = "none") +
+        labs(x = "", 
+             y = "Minutes in Bed")
+
+plot_grid(sl1, sl2, labels = c('A', 'B'), label_size = 12)
+
+# Along the week 
+sl3 <- bellaFit$sleep_day %>% select(-total_sleep_records) %>%
+        mutate(day = factor(wday(sleep_day), 
+                            labels = c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
+                            ordered = TRUE)) %>%
+        ggplot(mapping = aes(x = day, y = total_minutes_asleep, fill = day)) +
+        geom_boxplot() + 
+        scale_y_continuous(limits = c(0, 1000)) +
+        theme(legend.position = "none") +
+        labs(x = "Day", y = "Minutes Asleep")
+
+sl4 <- bellaFit$sleep_day %>% select(-total_sleep_records) %>%
+        mutate(day = factor(wday(sleep_day), 
+                            labels = c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
+                            ordered = TRUE)) %>%
+        ggplot(mapping = aes(x = day, y = total_time_in_bed, fill = day)) +
+        geom_boxplot() + 
+        scale_y_continuous(limits = c(0, 1000)) +
+        theme(legend.position = "none") +
+        labs(x = "Day", y = "Minutes in Bed")   
+
+plot_grid(sl3, sl4, labels = c('A', 'B'), label_size = 12)
+
+
+
+# Correlation matrix
+bellaFit$daily_activity %>% 
+        select(calories, total_steps, 
+               total_distance, 
+               sedentary_minutes, 
+               lightly_active_minutes, 
+               fairly_active_minutes,
+               very_active_minutes) %>% 
+        
+        rename(cal = calories,
+               ste = total_steps,
+               dis = total_distance,
+               sed = sedentary_minutes,
+               lig = lightly_active_minutes,
+               fai = fairly_active_minutes,
+               ver = very_active_minutes) %>% 
+
+cor() %>% corrplot::corrplot(type = "lower", method = "number")
+
+# Scatter plot
+bellaFit$daily_activity %>% 
+        select(calories, total_distance) %>%
+        ggplot(mapping = aes(x = total_distance, y = calories)) +
+        geom_point(alpha = 0.5) +  geom_smooth(col = "red") +
+        labs(y = "Calories", x = "Total Distance")
+
+
+# Statistics --------------------------------------------------------------
+# Sleep summary statistics
+bellaFit$sleep_day %>% 
+        select(total_minutes_asleep, total_time_in_bed) %>% 
+        summary()
+
+
+# Number of steps
+bellaFit$daily_steps %>% 
+        select(id, step_total) %>%
+        group_by(id) %>%
+        summarise(mean_day_steps = mean(step_total)) %>%
+        mutate(category = factor(case_when(mean_day_steps < 5000 ~ "Inactive",
+                                           mean_day_steps >= 5000 & mean_day_steps <= 10000 ~ "Average",
+                                           mean_day_steps > 10000 ~ "Active"),
+                                 levels = c("Inactive", "Average", "Active"),
+                                 ordered = TRUE)) %>% 
+        select(category) %>% group_by(category) %>% summarise(count_category = n()) %>%
+        mutate(percent = count_category / sum(count_category))
+
+
+# Daily use
+bellaFit$daily_activity %>% select(id) %>%
+        group_by(id) %>% summarise(days_used = n()) %>%
+        mutate(category = factor(case_when(days_used < 10 ~ "Low Use",
+                                           days_used >= 10 & days_used <= 20 ~ "Average Use",
+                                           days_used > 20 ~ "High Use"),
+                                 levels = c("Low Use", "Average Use", "High Use"),
+                                 ordered = TRUE)) %>%
+        select(category) %>% group_by(category) %>% summarise(count_category = n()) %>%
+        mutate(percent = count_category / sum(count_category))
+
+
