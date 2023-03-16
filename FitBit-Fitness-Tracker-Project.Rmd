@@ -372,33 +372,62 @@ bellaFit$daily_activity %>% select(calories, total_distance) %>%
 
 -   More than 10,000 steps: Active
 
+- Most of the users are `Average` with **54.5%**, while `Inactive` and `Active` share a similar proportion with **21.2%** and **24.2%** respectively. I create a donut chart below to better visualize the data.
+
 ```{r User type steps }
 # Selecting the columns "id" and "step_total" from the data frame bellaFit$daily_steps
-bellaFit$daily_steps %>% select(id, step_total) %>%
+steps <- bellaFit$daily_steps %>% select(id, step_total) %>%
+
+         # Grouping the data and Computing the mean number of steps per day for each id
+         group_by(id) %>% summarise(mean_day_steps = mean(step_total)) %>%
         
-        # Grouping the data and computing the mean number of steps per day for each id
-        group_by(id) %>% summarise(mean_day_steps = mean(step_total)) %>%
-        
-        # Adding a new variable "category" based on the mean number of steps 
-        mutate(category = factor(case_when(mean_day_steps < 5000 ~ "Inactive",
+         # Adding a new variable "category" based on the mean number of steps 
+         mutate(category = factor(case_when(mean_day_steps < 5000 ~ "Inactive",
                                            mean_day_steps >= 5000 & mean_day_steps <= 10000 ~ "Average",
                                            mean_day_steps > 10000 ~ "Active"),
-                                 levels = c("Inactive", "Average", "Active"),
+                                 labels = c("Inactive", "Average", "Active"),
                                  ordered = TRUE)) %>% 
         
-        # Selecting only the "category" column using select() function and grouping the data by "category"
-        select(category) %>% group_by(category) %>% 
+         # Selecting only the "category" column using select() function and grouping the data by "category"
+         select(category) %>% group_by(category) %>% 
         
-        # Computing the count and percent of observations in each category
-        summarise(count_category = n()) %>% mutate(percent = count_category / sum(count_category))
+         # Computing the count and percent of observations in each category
+         summarise(count_category = n()) %>% mutate(percent = count_category / sum(count_category)); steps
 ```
 
-4.  Similarly, we can identify the kind of user according to the number of day they use their device using `dplyr`.
+```{r donut chart user type}
+# Compute the cumulative percentages (top of each rectangle)
+steps$ymax <- cumsum(steps$percent)
+
+# Compute the bottom of each rectangle
+steps$ymin <- c(0, head(steps$ymax, n = -1))
+
+# Compute label position
+steps$labelPosition <- (steps$ymax + steps$ymin) / 2
+
+# Compute a good label
+steps$label <- paste0(steps$category, "\n value: ", round(steps$percent, 3) * 100, "%")
+
+# Make the plot
+ggplot(steps, aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = category)) +
+        geom_rect() +
+        geom_label(x = 3.5, aes(y = labelPosition, label = label), size = 6) +
+        scale_fill_brewer(palette = 8) +
+        coord_polar(theta = "y") +
+        xlim(c(2, 4)) +
+        theme_void() +
+        theme(legend.position = "none")
+
+```
+
+4.  Similarly, we can identify the kind of user according to the number of days they use their device using `dplyr`. This only shows if the device is used at least enough time to have a record; nevertheless, it does not show if it is used the whole day. 
+
+- Almost all the the users are labeled as `High Use` with **87.8%**, while `Low Use` and `High Use` share a similar proportion with **3.03%** and **9.09%** respectively. I create a donut chart below to better visualize the data.
 
 ```{r User type daily use}
 # Selecting the columns "id"  from the data frame bellaFit$daily_activity
-bellaFit$daily_activity %>% select(id) %>%
-        
+use <- bellaFit$daily_activity %>% select(id) %>%
+
         # Grouping the data and computing the count of id
         group_by(id) %>% summarise(days_used = n()) %>%
         
@@ -413,6 +442,48 @@ bellaFit$daily_activity %>% select(id) %>%
         select(category) %>% group_by(category) %>% summarise(count_category = n()) %>%
         
         # Computing the count and percent of observations in each category
-        mutate(percent = count_category / sum(count_category))
-
+        mutate(percent = count_category / sum(count_category)); use
 ```
+
+```{r donut chart daily use}
+# Compute the cumulative percentages (top of each rectangle)
+use$ymax <- cumsum(use$percent)
+
+# Compute the bottom of each rectangle
+use$ymin <- c(0, head(use$ymax, n = -1))
+
+# Compute c
+use$labelPosition <- (use$ymax + use$ymin) / 2
+
+# Compute a good label
+use$label <- paste0(use$category, "\n value: ", round(use$percent, 3) * 100, "%")
+
+# Manually change the label position, so they do nor overlap
+use$labelPosition[1:2] <- c(0.94, 0.15) 
+
+# Make the plot
+ggplot(use, aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = category)) +
+        geom_rect() +
+        geom_label(x = 3.5, aes(y = labelPosition, label = label), size = 6) +
+        scale_fill_brewer(palette = 8) +
+        coord_polar(theta = "y") +
+        xlim(c(2, 4)) +
+        theme_void() +
+        theme(legend.position = "none")
+```
+
+# Conclusion
+
+Data collected by activity trackers indeed can help people be healthy since it provides reliable feedback on their daily habits. However, the way the smart device showcases the data is important, due to the fact that it is how the user becomes aware of their behavior. 
+
+On the other hand, it is worth pointing out that the data collection period is short and the sample consisted of 33 volunteers. This can portentially lead to selection bias. This bias occurs when individuals choose whether or not to participate in a study or survey, and this choice is related to the outcome being studied. In this case, since 30 users consented to track their data, those individuals may differ in important ways from those who do not consent to participate and may not be a representative sample of the entire population.
+
+Being all said, my recommendations are the following:
+
+1. Even though almost all the users used their smart device for more than 20 days, only 24.2% are `Active` users, who are those that walk more than 10,000 steps per day. **We can encourage FitBit customers to have an "active" life by showing them the benefits of different activities according to their goals. These goals can be such as being in shape, loose weight, built muscle, etc.**  
+
+2. A reward system can be implemented to motivate FitBit customers. **A goal tracker can be developed to adapt the app to cusmoers' needs**. 
+
+3. According to the data collected, users' sleep habits are more variable on weekends and they do not sleep more than 480 minutes (8 hours); on average they sleep roughly 420. **They can be more aware of their sleep routines with app notifications or sleep schedules features inside the app**
+
+4. We see that `calories` burned and `Total Distance` have a medium correlation, this implies that there most be other variables that affect `calories` brned, such as diet. **BellaBeat could suggest ideas for low-calorie-diets, therefore the users can implement them to achieve their health goals.**
